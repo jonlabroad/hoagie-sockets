@@ -1,0 +1,83 @@
+service: hoagie-sockets
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-prune-plugin
+  - serverless-domain-manager
+frameworkVersion: "3"
+
+custom:
+  prune:
+    automatic: true
+    number: 1
+  myStage: ${opt:stage, self:provider.stage}
+  myTableName: HoagieTools-${opt:stage, self:provider.stage}
+  customDomain:
+    domainName: ws-${self:custom.myStage}.hoagieman.net
+    certificateArn: arn:aws:acm:us-east-1:796987500533:certificate/34ddd63f-ae46-4812-a2ee-39b9594d8ef2
+    basePath: ''
+    stage: ${self:custom.myStage}
+    apiType: websocket
+    endpointType: regional 
+    #createRoute53Record: false
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  apiGateway:
+    websocketsApiRouteSelectionExpression: $request.body.action # custom routes are selected by the value of the action property in the body
+    websocketsDescription: Hoagie Websockets
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'dynamodb:Query'
+        - 'dynamodb:Scan'
+        - 'dynamodb:GetItem'
+        - 'dynamodb:PutItem'
+        - 'dynamodb:UpdateItem'
+        - 'dynamodb:DeleteItem'
+      Resource: "arn:aws:dynamodb:*:*:table/${self:custom.myTableName}"
+    
+    - Effect: Allow
+      Action:
+        - events:PutEvents
+      Resource: arn:aws:events:*:796987500533:event-bus/default
+  environment:
+    STAGE: ${self:custom.myStage}
+    TABLENAME: ${self:custom.myTableName}
+
+functions:
+  connect:
+    handler: hoagiesocket.connect
+    events:
+      - websocket:
+          route: $connect
+
+  disconnect:
+    handler: hoagiesocket.disconnect
+    events:
+      - websocket:
+          route: $disconnect
+
+  subscribe:
+    handler: hoagiesocket.subscribe
+    events:
+      - websocket:
+          route: subscribe
+
+  ping:
+    handler: hoagiesocket.ping
+    events:
+      - websocket:
+          route: ping
+
+  broadcast:
+    handler: hoagiesocket.broadcast
+    events:
+      - eventBridge:
+          pattern:
+            source:
+              - hoagie.topic
+
+  testtopicsend:
+    handler: hoagiesocket.clientSendTest
