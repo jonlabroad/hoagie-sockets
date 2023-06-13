@@ -46,5 +46,5 @@ export const broadcast = async (
 };
 
 export const clientSendTest = async () => {
-  await MessageBroadcaster.broadcast("dono.272628458", "THIS IS JUST A TEST!");
+  await MessageBroadcaster.broadcast("dono.272628458", "dono", { msg: "THIS IS JUST A TEST!" } );
 };

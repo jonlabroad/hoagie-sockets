@@ -2,9 +2,10 @@ import { ApiGatewayManagementApi } from "aws-sdk";
 import { ConnectionInfoProvider } from "./functions/persistance/ConnectionInfoProvider";
 import { ConnectionInfo } from "./functions/persistance/ConnectionInfo";
 import Bottleneck from "bottleneck";
+import { HoagieTopicEvent } from "./HoagieEvent";
 
 export class MessageBroadcaster {
-  public static async broadcast(topic: string, data: string) {
+  public static async broadcast(topic: string, type: string, data: object) {
     const connections = await this.getConnectionsForTopic(topic);
     console.log({ connections });
 
@@ -12,12 +13,18 @@ export class MessageBroadcaster {
       maxConcurrent: 10,
     });
 
+    const message: HoagieTopicEvent = {
+      topic,
+      type,
+      data
+    };
+
     await limiter.schedule(() =>
       Promise.all(
         connections.map(async (connection) => {
           try {
             console.log(`Sending to ${connection.id} ${connection.topic}`);
-            return await this.sendToConnection(connection, data);
+            return await this.sendToConnection(connection, message);
           } catch (err) {
             await this.handleSendError(connection, err);
             return Promise.resolve(undefined);
@@ -27,9 +34,9 @@ export class MessageBroadcaster {
     );
   }
 
-  private static async sendToConnection(
+  public static async sendToConnection(
     connection: ConnectionInfo,
-    data: string
+    message: HoagieTopicEvent,
   ) {
     if (connection.endpoint) {
       const apiGatewayManagementApi = new ApiGatewayManagementApi({
@@ -38,12 +45,28 @@ export class MessageBroadcaster {
       const result = await apiGatewayManagementApi
         .postToConnection({
           ConnectionId: connection.id,
-          Data: data,
+          Data: JSON.stringify(message),
         })
         .promise();
       console.log({ result });
       return result;
     }
+  }
+
+  public static async sendPong(
+    connectionId: string,
+    endpoint: string
+  ) {
+      const apiGatewayManagementApi = new ApiGatewayManagementApi({
+        endpoint,
+      });
+      const result = await apiGatewayManagementApi
+        .postToConnection({
+          ConnectionId: connectionId,
+          Data: "pong",
+        })
+        .promise();
+      return result;
   }
 
   private static async handleSendError(connection: ConnectionInfo, err: any) {
