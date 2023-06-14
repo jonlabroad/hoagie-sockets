@@ -1,11 +1,10 @@
 import { ConnectionInfo } from "./ConnectionInfo";
 import { DynamoDB } from "aws-sdk";
-import { RequestBody } from "./RequestBody";
-import { ConnectionInfoFactory } from "./ConnectionInfoFactory";
 import Config from "../../Config";
+import { TopicInfoProvider } from "./TopicInfoProvider";
+import { TopicInfo } from "../GetAllConnections";
 
-const defaultExpirySec = 8 * 60 * 60;
-//const defaultExpirySec = 10 * 60;
+const defaultExpirySec = 24 * 60 * 60;
 
 export class ConnectionInfoProvider {
   async getTopicConnections(topic: string): Promise<ConnectionInfo[]> {
@@ -26,6 +25,25 @@ export class ConnectionInfoProvider {
     return (
       response.Items?.map((item) => item.connectionInfo as ConnectionInfo).filter(c => !!c) ?? []
     );
+  }
+
+  public async getAll() {
+    const topicIds = await new TopicInfoProvider().getAllTopicIds();
+    console.log({topicIds});
+    const connInfoProvider = new ConnectionInfoProvider();
+    const connections = await Promise.all(
+      topicIds.map(async (topicId) => {
+        const topicConnections = await connInfoProvider.getTopicConnections(
+          topicId
+        );
+        return {
+          id: topicId,
+          connections: topicConnections,
+        } as TopicInfo;
+      })
+    );
+
+    return connections;
   }
 
   async set(connectionInfo: ConnectionInfo) {
@@ -100,7 +118,7 @@ export class ConnectionInfoProvider {
   }
 
   private getCategoryKey(topic: string) {
-    return `${ConnectionInfoProvider.KeyBase}_TOPIC_${topic.toLowerCase()}`;
+    return `${this.getTopicPrefix()}${topic.toLowerCase()}`;
   }
 
   private getSortKey(connectionId: string) {
@@ -111,5 +129,9 @@ export class ConnectionInfoProvider {
     return new DynamoDB.DocumentClient();
   }
 
-  private static KeyBase = "hoagiesocketsConnections";
+  private getTopicPrefix() {
+    return `${ConnectionInfoProvider.KeyBase}_TOPIC_`;
+  }
+
+  public static KeyBase = "hoagiesocketsConnections";
 }

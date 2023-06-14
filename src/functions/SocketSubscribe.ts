@@ -2,6 +2,7 @@ import { APIGatewayEventWebsocketRequestContextV2 } from "aws-lambda";
 import { ConnectionInfoFactory } from "./persistance/ConnectionInfoFactory";
 import { RequestBody } from "./persistance/RequestBody";
 import { ConnectionInfoProvider } from "./persistance/ConnectionInfoProvider";
+import { TopicInfoProvider } from "./persistance/TopicInfoProvider";
 
 export class SocketSubscribe {
   public static async subscribe(
@@ -33,6 +34,8 @@ export class SocketSubscribe {
 
     const connectionProvider = new ConnectionInfoProvider();
     await connectionProvider.set(connectionInfo);
+
+    await (new TopicInfoProvider).set(connectionInfo.topic);
 
     return { statusCode: 200 };
   }

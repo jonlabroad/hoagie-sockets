@@ -79,5 +79,11 @@ functions:
             source:
               - hoagie.topic
 
+  getallconnections:
+    handler: hoagiesocket.getallconnections
+    events:
+      - websocket:
+          route: getallconnections
+
   testtopicsend:
     handler: hoagiesocket.clientSendTest

@@ -1,4 +1,5 @@
 import {
+  APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
   APIGatewayProxyWebsocketEventV2,
   Context,
@@ -9,6 +10,7 @@ import { SocketDisconnect } from "./src/functions/SocketDisconnect";
 import { SocketConnect } from "./src/functions/SocketConnect";
 import { MessageBroadcaster } from "./src/MessageBroadcaster";
 import { SocketBroadcast } from "./src/functions/SocketBroadcast";
+import { GetAllConnections } from "./src/functions/GetAllConnections";
 
 export const connect = async (
   event: APIGatewayProxyWebsocketEventV2,
@@ -43,6 +45,13 @@ export const broadcast = async (
   context: Context
 ): Promise<any> => {
   return await SocketBroadcast.broadcast(event);
+};
+
+export const getallconnections = async (
+  event: APIGatewayProxyWebsocketEventV2,
+  context: Context
+): Promise<APIGatewayProxyResultV2> => {
+  return await GetAllConnections.getAll(event.requestContext);
 };
 
 export const clientSendTest = async () => {

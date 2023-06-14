@@ -39,18 +39,22 @@ export class MessageBroadcaster {
     message: HoagieTopicEvent,
   ) {
     if (connection.endpoint) {
-      const apiGatewayManagementApi = new ApiGatewayManagementApi({
-        endpoint: connection.endpoint,
-      });
-      const result = await apiGatewayManagementApi
-        .postToConnection({
-          ConnectionId: connection.id,
-          Data: JSON.stringify(message),
-        })
-        .promise();
-      console.log({ result });
-      return result;
+      return this.sendTo(connection.id, connection.endpoint, JSON.stringify(message));
     }
+  }
+
+  public static async sendTo(connectionId: string, endpoint: string, data: string) {
+    const apiGatewayManagementApi = new ApiGatewayManagementApi({
+      endpoint,
+    });
+    const result = await apiGatewayManagementApi
+      .postToConnection({
+        ConnectionId: connectionId,
+        Data: data,
+      })
+      .promise();
+    console.log({ result });
+    return result;
   }
 
   public static async sendPong(
@@ -60,6 +64,9 @@ export class MessageBroadcaster {
       const apiGatewayManagementApi = new ApiGatewayManagementApi({
         endpoint,
       });
+      apiGatewayManagementApi.getConnection({
+        ConnectionId: connectionId
+      }).promise();
       const result = await apiGatewayManagementApi
         .postToConnection({
           ConnectionId: connectionId,
